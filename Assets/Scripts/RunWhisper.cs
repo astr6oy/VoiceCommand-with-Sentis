@@ -10,8 +10,6 @@ public class RunWhisper : MonoBehaviour
     Worker decoder1, decoder2, encoder, spectrogram;
     Worker argmax;
 
-    public AudioClip audioClip;
-
     // This is how many tokens you want. It can be adjusted.
     const int maxTokens = 100;
 
@@ -47,7 +45,7 @@ public class RunWhisper : MonoBehaviour
     public ModelAsset audioEncoder;
     public ModelAsset logMelSpectro;
 
-    public async void Start()
+    public void Awake()
     {
         SetupWhiteSpaceShifts();
         GetTokens();
@@ -71,9 +69,8 @@ public class RunWhisper : MonoBehaviour
         outputTokens[2] = TRANSCRIBE; //TRANSLATE;//
         //outputTokens[3] = NO_TIME_STAMPS;// START_TIME;//
         tokenCount = 3;
-
-        // Transcribe();
     }
+    
     Awaitable m_Awaitable;
 
     NativeArray<int> lastToken;
@@ -81,9 +78,9 @@ public class RunWhisper : MonoBehaviour
     Tensor<int> tokensTensor;
     Tensor<float> audioInput;
 
-    public async void Transcribe()
+    public async void Transcribe(AudioClip audioClip)
     {
-        LoadAudio();
+        LoadAudio(audioClip);
         EncodeAudio();
         transcribe = true;
 
@@ -104,7 +101,7 @@ public class RunWhisper : MonoBehaviour
         }
     }
 
-    void LoadAudio()
+    void LoadAudio(AudioClip audioClip)
     {
         numSamples = audioClip.samples;
         var data = new float[maxSamples];

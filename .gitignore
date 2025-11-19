@@ -97,3 +97,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+ggml-large-v3-turbo-q8_0.bin
+ggml-large-v3-turbo-q8_0.bin.meta

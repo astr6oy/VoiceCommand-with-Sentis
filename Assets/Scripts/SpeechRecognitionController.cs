@@ -1,41 +1,40 @@
 using UnityEngine;
-using TMPro;
-using UnityEngine.UI;
 using UnityEngine.Events;
-using System.IO;
+using System.Threading.Tasks;
+using Whisper;
+
+public enum WhisperImplementation {
+    RunWhisper,
+    WhisperManager
+}
 
 public class SpeechRecognitionController : MonoBehaviour {
+    [Header("Whisper Implementation")]
+    [SerializeField] private WhisperImplementation implementation = WhisperImplementation.RunWhisper;
+
+    [Header("Implementation References")]
+    [SerializeField] private RunWhisper runWhisper;
+    [SerializeField] private WhisperManager whisperManager;
+    [Header("Sample Audio Clip")]
+    [SerializeField] private bool useSampleAudioClipOnStart = false;
+    [SerializeField] private AudioClip sampleAudioClip;
+
+    [Header("UI Events")]
     [SerializeField] private UnityEvent onStartRecording;
     [SerializeField] private UnityEvent onSendRecording;
     [SerializeField] public UnityEvent<string> onResponse;
-    [SerializeField] private TMP_Dropdown m_deviceDropdown;
-    [SerializeField] private Image m_progress;
-
-    public RunWhisper runWhisper; // This is the reference to the RunWhisper script
 
     private string m_deviceName;
-    [SerializeField]
     private AudioClip m_clip;
-    private byte[] m_bytes;
     private bool m_recording;
 
-    private void Awake() {
-        // Select the microphone device (by default the first one) but
-        // also populate the dropdown with all available devices
+    private void Start() {
         m_deviceName = Microphone.devices[0];
-        foreach (var device in Microphone.devices) {
-            m_deviceDropdown.options.Add(new TMP_Dropdown.OptionData(device));
-        }
-        m_deviceDropdown.value = 0;
-        m_deviceDropdown.onValueChanged.AddListener(OnDeviceChanged);
-    }
 
-    /// <summary>
-    /// This method is called when the user selects a different device from the dropdown
-    /// </summary>
-    /// <param name="index"></param>
-    private void OnDeviceChanged(int index) {
-        m_deviceName = Microphone.devices[index];
+        if (useSampleAudioClipOnStart) {
+            m_clip = sampleAudioClip;
+            SendRecording();
+        }
     }
 
     /// <summary>
@@ -71,18 +70,66 @@ public class SpeechRecognitionController : MonoBehaviour {
     /// <summary>
     /// Run the Whisper Model with the audio clip to transcribe the user's voice
     /// </summary>
-    private void SendRecording() {
+    private async void SendRecording() {
         onSendRecording.Invoke();
-        runWhisper.audioClip = m_clip;
-        runWhisper.Transcribe();
+
+        switch (implementation) {
+            case WhisperImplementation.RunWhisper:
+                if (runWhisper != null) {
+                    runWhisper.Transcribe(m_clip);
+                } else {
+                    Debug.LogError("RunWhisper reference is not set!");
+                }
+                break;
+
+            case WhisperImplementation.WhisperManager:
+                if (whisperManager != null) {
+                    await TranscribeWithWhisperManager();
+                } else {
+                    Debug.LogError("WhisperManager reference is not set!");
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Transcribe audio using WhisperManager implementation
+    /// </summary>
+    private async Task TranscribeWithWhisperManager() {
+        if (m_clip == null) {
+            Debug.LogError("Audio clip is null!");
+            return;
+        }
+
+        // Convert AudioClip to float array
+        float[] samples = new float[m_clip.samples * m_clip.channels];
+        m_clip.GetData(samples, 0);
+
+        try {
+            // Call WhisperManager's GetTextAsync method
+            WhisperResult result = await whisperManager.GetTextAsync(
+                samples,
+                m_clip.frequency,
+                m_clip.channels
+            );
+
+            // Invoke response event with the transcription result
+            if (result != null && !string.IsNullOrEmpty(result.Result)) {
+                onResponse.Invoke(result.Result);
+                Debug.Log($"Transcription: {result.Result}");
+                Debug.Log($"Language: {result.Language} (ID: {result.LanguageId})");
+            } else {
+                Debug.LogWarning("Transcription result is empty!");
+            }
+        } catch (System.Exception e) {
+            Debug.LogError($"Error during transcription: {e.Message}");
+        }
     }
 
     private void Update() {
         if (!m_recording) {
             return;
         }
-
-        //m_progress.fillAmount = (float)Microphone.GetPosition(m_deviceName) / m_clip.samples;
 
         if (Microphone.GetPosition(m_deviceName) >= m_clip.samples) {
             StopRecording();
