@@ -9,6 +9,13 @@
       },
       "hash": "53e1baac3cde90c46934f82ee1d61802d2bd6651"
     },
+    "com.niftyhat.fuzzysharp": {
+      "version": "https://github.com/NiftyHat/FuzzySharpUnity.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "df9e401292d53f2e4351ff304ec4e41e5134de52"
+    },
     "com.unity.ai.inference": {
       "version": "2.4.1",
       "depth": 0,
