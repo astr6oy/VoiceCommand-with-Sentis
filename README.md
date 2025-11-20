@@ -9,7 +9,9 @@
 - 영어도 정확한 발음 필요해서 실용성 낮음
 - ONNX 포맷 범용성은 있으나 설정이 복잡함
 
-![scene01.mp4](docs/scene01.mp4)
+
+https://github.com/user-attachments/assets/dd2940d1-9440-40e5-9c8c-2e9a9bbd0a34
+
 *(inference-engine-whisper-tiny sample test)*
 
 ### whisper.unity (whisper.cpp 기반)
@@ -18,13 +20,17 @@
 - 발음 인식률은 여전히 아쉬움
 - ggml-large-v3-turbo-q8_0 (874.2MB): 인식률 개선되나 용량 부담
 
-![docs/scene02-01.mp4](docs/scene02-01.mp4)
+
+https://github.com/user-attachments/assets/a06865ae-a565-4204-9af7-9667182a44d8
+
 *(whisper.unity  ggml-tiny sample test)*
 
-![docs/scene02-02.mp4](docs/scene02-02.mp4)
+https://github.com/user-attachments/assets/18be5621-50ed-4233-8046-477479b117cc
+
 *(whisper.unity  ggml-large-v3-turbo-q8_0 sample test)*
 
-![docs/scene03.mp4](docs/scene03.mp4)
+https://github.com/user-attachments/assets/100b48e7-0c50-4b61-8844-e3c1eb79c2b8
+
 *(whisper.unity  ggml-large-v3-turbo-q8_0 command demo)*
 
 **결론**: whisper.unity + ggml-tiny 조합 사용
