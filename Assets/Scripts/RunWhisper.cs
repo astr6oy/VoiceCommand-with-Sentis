@@ -4,6 +4,7 @@ using Unity.InferenceEngine;
 using System.Text;
 using Unity.Collections;
 using Newtonsoft.Json;
+using UnityEngine.Events;
 
 public class RunWhisper : MonoBehaviour
 {
@@ -24,7 +25,6 @@ public class RunWhisper : MonoBehaviour
     const int NO_TIME_STAMPS = 50363;
     const int START_TIME = 50364;
 
-    int numSamples;
     string[] tokens;
 
     int tokenCount = 0;
@@ -44,6 +44,9 @@ public class RunWhisper : MonoBehaviour
     public ModelAsset audioDecoder1, audioDecoder2;
     public ModelAsset audioEncoder;
     public ModelAsset logMelSpectro;
+
+    // Callback event for transcription completion
+    public UnityEvent<string> OnTranscriptionComplete = new UnityEvent<string>();
 
     public void Awake()
     {
@@ -80,9 +83,32 @@ public class RunWhisper : MonoBehaviour
 
     public async void Transcribe(AudioClip audioClip)
     {
+        // Reset output string for new transcription
+        outputString = string.Empty;
+
+        // Reset token count to initial state
+        tokenCount = 3;
+        outputTokens[0] = START_OF_TRANSCRIPT;
+        outputTokens[1] = ENGLISH;
+        outputTokens[2] = TRANSCRIBE;
+
         LoadAudio(audioClip);
         EncodeAudio();
         transcribe = true;
+
+        // Clean up previous tensors if they exist
+        if (tokensTensor != null)
+        {
+            tokensTensor.Dispose();
+        }
+        if (lastTokenTensor != null)
+        {
+            lastTokenTensor.Dispose();
+        }
+        if (lastToken.IsCreated)
+        {
+            lastToken.Dispose();
+        }
 
         tokensTensor = new Tensor<int>(new TensorShape(1, maxTokens));
         ComputeTensorData.Pin(tokensTensor);
@@ -95,7 +121,11 @@ public class RunWhisper : MonoBehaviour
         while (true)
         {
             if (!transcribe || tokenCount >= (outputTokens.Length - 1))
+            {
+                // Transcription completed, invoke callback with result
+                OnTranscriptionComplete.Invoke(outputString);
                 return;
+            }
             m_Awaitable = InferenceStep();
             await m_Awaitable;
         }
@@ -103,11 +133,9 @@ public class RunWhisper : MonoBehaviour
 
     void LoadAudio(AudioClip audioClip)
     {
-        numSamples = audioClip.samples;
         var data = new float[maxSamples];
-        numSamples = maxSamples;
         audioClip.GetData(data, 0);
-        audioInput = new Tensor<float>(new TensorShape(1, numSamples), data);
+        audioInput = new Tensor<float>(new TensorShape(1, maxSamples), data);
     }
 
     void EncodeAudio()
@@ -178,12 +206,22 @@ public class RunWhisper : MonoBehaviour
         {
             transcribe = false;
         }
+        else if (index < tokens.Length && index >= 50257)
+        {
+            // Special token detected - do not add to output string
+            Debug.Log($"Special token detected: {index}");
+        }
         else if (index < tokens.Length)
         {
             outputString += GetUnicodeText(tokens[index]);
+            Debug.Log(outputString);
         }
-
-        Debug.Log(outputString);
+        else
+        {
+            // Invalid token - out of range
+            Debug.LogWarning($"Invalid token index: {index}. Stopping transcription.");
+            transcribe = false;
+        }
     }
 
     // Tokenizer

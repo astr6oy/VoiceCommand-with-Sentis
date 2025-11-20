@@ -31,16 +31,27 @@ public class SpeechRecognitionController : MonoBehaviour {
     private void Start() {
         m_deviceName = Microphone.devices[0];
 
-        if (useSampleAudioClipOnStart) {
-            m_clip = sampleAudioClip;
-            SendRecording();
+        // Subscribe to RunWhisper's callback if using RunWhisper implementation
+        if (implementation == WhisperImplementation.RunWhisper && runWhisper != null) {
+            runWhisper.OnTranscriptionComplete.AddListener(OnRunWhisperComplete);
         }
+
+        if (useSampleAudioClipOnStart) {
+            SendAudioClip(sampleAudioClip);
+        }
+    }
+
+    public void SendAudioClip(AudioClip audioClip)
+    {
+        m_clip = audioClip;
+        SendRecording();
     }
 
     /// <summary>
     /// This method is called when the user clicks the button
     /// </summary>
     public void Click() {
+        Debug.Log("Click");
         if (!m_recording) {
             StartRecording();
         } else {
@@ -126,6 +137,18 @@ public class SpeechRecognitionController : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Callback handler for RunWhisper transcription completion
+    /// </summary>
+    private void OnRunWhisperComplete(string transcriptionResult) {
+        if (!string.IsNullOrEmpty(transcriptionResult)) {
+            onResponse.Invoke(transcriptionResult);
+            Debug.Log($"RunWhisper Transcription: {transcriptionResult}");
+        } else {
+            Debug.LogWarning("RunWhisper transcription result is empty!");
+        }
+    }
+
     private void Update() {
         if (!m_recording) {
             return;
@@ -133,6 +156,13 @@ public class SpeechRecognitionController : MonoBehaviour {
 
         if (Microphone.GetPosition(m_deviceName) >= m_clip.samples) {
             StopRecording();
+        }
+    }
+
+    private void OnDestroy() {
+        // Unsubscribe from RunWhisper callback
+        if (implementation == WhisperImplementation.RunWhisper && runWhisper != null) {
+            runWhisper.OnTranscriptionComplete.RemoveListener(OnRunWhisperComplete);
         }
     }
 }
